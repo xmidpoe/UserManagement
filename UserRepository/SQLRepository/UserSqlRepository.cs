@@ -18,7 +18,6 @@ namespace UserRepository.SQLRepository
 
             if (string.IsNullOrEmpty(_db.ConnectionString))
                 _db.ConnectionString = GetConnectionString();
-
         }
 
         public string GetConnectionString()
@@ -55,18 +54,15 @@ namespace UserRepository.SQLRepository
             command.Parameters.Add(new SqlParameter("@CULTURE", user.Email));
             command.Parameters.Add(new SqlParameter("@PASSWORD", user.Password));
 
-            try
+
+            command.Connection.Open();
+
+
+            using (command.Transaction = command.Connection.BeginTransaction())
             {
-                command.Connection.Open();
-
-
-                using (command.Transaction = command.Connection.BeginTransaction())
+                try
                 {
-
-
                     int result = command.ExecuteNonQuery();
-
-
 
                     if (result == -1)
                     {
@@ -95,20 +91,21 @@ namespace UserRepository.SQLRepository
                     }
                 }
 
-            }
-            catch (Exception ex)
-            {
-                command.Transaction.Rollback();
 
-
-                return new RepoResponseMessage<User>
+                catch (SqlException ex)
                 {
-                    IsSuccess = false,
-                    ErrorCode = 1,
-                    Message = ex.Message
-                };
+                    command.Transaction.Rollback();
+
+
+                    return new RepoResponseMessage<User>
+                    {
+                        IsSuccess = false,
+                        ErrorCode = 1,
+                        Message = ex.Number == 2627 ? "User Allready Exists" : ex.Message
+                    };
+                }
+                finally { command.Connection.Close(); }
             }
-            finally { command.Connection.Close(); }
         }
 
         public RepoResponseMessage<User> GetUserById(User user)
@@ -121,11 +118,11 @@ namespace UserRepository.SQLRepository
             command.CommandType = CommandType.StoredProcedure;
             command.Parameters.Add(new SqlParameter("@ID", user.Id));
 
-            try
-            {
-                command.Connection.Open();
+            command.Connection.Open();
 
-                using (var reader = command.ExecuteReader())
+            using (var reader = command.ExecuteReader())
+            {
+                try
                 {
                     var userData = new User();
 
@@ -153,20 +150,21 @@ namespace UserRepository.SQLRepository
                         Data = userData
                     };
                 }
-            }
-            catch (Exception ex)
-            {
-                return new RepoResponseMessage<User>
-                {
-                    IsSuccess = true,
-                    ErrorCode = 0,
-                    Message = ex.Message
-                };
 
-            }
-            finally
-            {
-                command.Connection.Close();
+                catch (SqlException ex)
+                {
+                    return new RepoResponseMessage<User>
+                    {
+                        IsSuccess = true,
+                        ErrorCode = 0,
+                        Message = ex.Message
+                    };
+
+                }
+                finally
+                {
+                    command.Connection.Close();
+                }
             }
         }
 
@@ -186,13 +184,15 @@ namespace UserRepository.SQLRepository
             command.Parameters.Add(new SqlParameter("@CULTURE", user.Email));
             command.Parameters.Add(new SqlParameter("@PASSWORD", user.Password));
 
-            try
+            command.Connection.Open();
+
+
+            using (command.Transaction = command.Connection.BeginTransaction())
             {
-                command.Connection.Open();
 
-
-                using (command.Transaction = command.Connection.BeginTransaction())
+                try
                 {
+
                     int result = command.ExecuteNonQuery();
 
                     if (result == -1)
@@ -222,21 +222,22 @@ namespace UserRepository.SQLRepository
                     }
                 }
 
-            }
-            catch (Exception ex)
-            {
-                command.Transaction.Rollback();
 
-                return new RepoResponseMessage<User>
+                catch (SqlException ex)
                 {
-                    IsSuccess = false,
-                    ErrorCode = 1,
-                    Message = ex.Message
-                };
-            }
-            finally 
-            { 
-                command.Connection.Close(); 
+                    command.Transaction.Rollback();
+
+                    return new RepoResponseMessage<User>
+                    {
+                        IsSuccess = false,
+                        ErrorCode = 1,
+                        Message = ex.Message
+                    };
+                }
+                finally
+                {
+                    command.Connection.Close();
+                }
             }
         }
 
@@ -250,54 +251,60 @@ namespace UserRepository.SQLRepository
             command.Parameters.Add(new SqlParameter("@ID", user.Id));
             command.Parameters.Add(new SqlParameter("@IS_DELETED", true));
 
-            try
+            command.Connection.Open();
+
+
+            using (command.Transaction = command.Connection.BeginTransaction())
             {
-                command.Connection.Open();
 
-
-                using (command.Transaction = command.Connection.BeginTransaction())
+                try
                 {
-                    int result = command.ExecuteNonQuery();
+                    command.Connection.Open();
 
-                    if (result == -1)
+
+                    using (command.Transaction = command.Connection.BeginTransaction())
                     {
-                        command.Transaction.Commit();
+                        int result = command.ExecuteNonQuery();
 
-                        return new RepoResponseMessage<User>
+                        if (result == -1)
                         {
-                            IsSuccess = true,
-                            ErrorCode = 0,
-                            Message = "User Deleted"
-                        };
-                    }
-                    else
-                    {
+                            command.Transaction.Commit();
 
-                        command.Transaction.Rollback();
-
-                        return new RepoResponseMessage<User>
+                            return new RepoResponseMessage<User>
+                            {
+                                IsSuccess = true,
+                                ErrorCode = 0,
+                                Message = "User Deleted"
+                            };
+                        }
+                        else
                         {
-                            IsSuccess = false,
-                            ErrorCode = 1,
-                            Message = "Error Deleting User"
-                        };
+
+                            command.Transaction.Rollback();
+
+                            return new RepoResponseMessage<User>
+                            {
+                                IsSuccess = false,
+                                ErrorCode = 1,
+                                Message = "Error Deleting User"
+                            };
+                        }
                     }
                 }
-
-            }
-            catch (Exception ex)
-            {
-                command.Transaction.Rollback();
-
-
-                return new RepoResponseMessage<User>
+                catch (SqlException ex)
                 {
-                    IsSuccess = false,
-                    ErrorCode = 1,
-                    Message = ex.Message
-                };
+                    command.Transaction.Rollback();
+
+
+                    return new RepoResponseMessage<User>
+                    {
+                        IsSuccess = false,
+                        ErrorCode = 1,
+                        Message = ex.Message
+                    };
+                }
+                finally { command.Connection.Close(); }
             }
-            finally { command.Connection.Close(); }
         }
 
         public RepoResponseMessage<User> GetUserByUserNameAndPassword(User user)
@@ -309,13 +316,13 @@ namespace UserRepository.SQLRepository
             command.CommandType = CommandType.StoredProcedure;
             command.Parameters.Add(new SqlParameter("@USER_NAME", user.UserName));
             command.Parameters.Add(new SqlParameter("@PASSWORD", user.Password));
+            command.Connection.Open();
 
-            try
+            using (var reader = command.ExecuteReader())
             {
-                command.Connection.Open();
-
-                using (var reader = command.ExecuteReader())
+                try
                 {
+
                     var userData = new User();
 
                     while (reader.Read())
@@ -342,20 +349,21 @@ namespace UserRepository.SQLRepository
                         Data = userData
                     };
                 }
-            }
-            catch (Exception ex)
-            {
-                return new RepoResponseMessage<User>
-                {
-                    IsSuccess = true,
-                    ErrorCode = 0,
-                    Message = ex.Message
-                };
 
-            }
-            finally
-            {
-                command.Connection.Close();
+                catch (SqlException ex)
+                {
+                    return new RepoResponseMessage<User>
+                    {
+                        IsSuccess = true,
+                        ErrorCode = 0,
+                        Message = ex.Message
+                    };
+
+                }
+                finally
+                {
+                    command.Connection.Close();
+                }
             }
         }
     }

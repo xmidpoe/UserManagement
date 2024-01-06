@@ -1,16 +1,10 @@
-﻿using UserLogger;
-using Serilog;
-using Serilog.Configuration;
-
-
-namespace UserManagement
+﻿using Serilog;namespace UserLogger
 {
-    public class UserLogger : IUserLogger
+    public class UserSeriLogLogger : IUserLogger
     {
         ILogger _logger;
-        public UserLogger(ILogger logger) 
+        public UserSeriLogLogger(ILogger logger) 
         { 
-
            _logger = logger;
         }
 

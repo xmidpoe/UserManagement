@@ -8,9 +8,9 @@ using System.Security.Claims;
 using System.Text;
 using UserAPI.Common;
 using UserAPI.Models;
-using UserManagement;
 using UserRepository;
 using UserRepository.Models;
+using UserLogger;
 
 namespace UserAPI.Controllers
 {
@@ -31,6 +31,12 @@ namespace UserAPI.Controllers
         [HttpPost("addUser")]
         public ActionResult<RepoResponseMessage<User>> AddUser([FromBody] User user)
         {
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             RepoResponseMessage<User> responseMessage;
 
             var msg = new LogBuilder(this.HttpContext).GetMessage(MethodBase.GetCurrentMethod().Name, $"user: {user}");
@@ -93,6 +99,11 @@ namespace UserAPI.Controllers
         [HttpDelete("{id}")]
         public ActionResult<RepoResponseMessage<User>> DeleteUser(Guid id)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             RepoResponseMessage<User> responseMessage;
 
             var msg = new LogBuilder(this.HttpContext).GetMessage(MethodBase.GetCurrentMethod().Name, $"Id: {id}"); 
@@ -122,6 +133,11 @@ namespace UserAPI.Controllers
         [HttpGet("getuser/{id}")]
         public ActionResult<RepoResponseMessage<User>> GetUser(Guid id)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             RepoResponseMessage<User> responseMessage;
 
             var msg = new LogBuilder(this.HttpContext).GetMessage(MethodBase.GetCurrentMethod().Name, $"Id: {id}");
@@ -153,6 +169,11 @@ namespace UserAPI.Controllers
         [HttpPost("LogIn")]
         public IActionResult LogIn([FromBody] UserLogin userLogin)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             User user = new User();
             user.UserName = userLogin.UserName;
             user.Password = userLogin.Password;

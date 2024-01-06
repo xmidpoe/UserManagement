@@ -9,13 +9,18 @@ namespace UserRepository.SQLRepository.Tests
     [TestClass()]
     public class UserSqlRepositoryTests
     {
-        private const string CONNECTION_STRING = @"Data Source=localhost;Initial Catalog=UsersManagement;Integrated Security=True;Pooling=False;TrustServerCertificate=True;";
         private readonly IUserRepository<User> _userRepository;
         private readonly SqlConnection _connection;
         private readonly IConfiguration _configuration;
         public UserSqlRepositoryTests() 
         {
-            _connection = new SqlConnection(CONNECTION_STRING);
+
+            _configuration = new ConfigurationBuilder()
+                            .SetBasePath(Directory.GetCurrentDirectory())
+                            .AddJsonFile("appsettings.test.json")
+                           .Build();
+
+            _connection = new SqlConnection(_configuration.GetConnectionString("UserDbConnection"));
             _userRepository = new UserSqlRepository(_connection, _configuration);
         }
 
@@ -67,6 +72,47 @@ namespace UserRepository.SQLRepository.Tests
                 //Test Failed
                 Assert.IsNotNull(ex.Message);
             
+            }
+            finally
+            {
+                //Clear test data
+                ClearTestData(user.Id);
+            }
+        }
+
+        [TestMethod()]
+        public void Test_Unique_Email()
+        {
+            //Setup User
+            User user = new User();
+            user.Id = Guid.NewGuid();
+            user.UserName = "Test";
+            user.FullName = "TestFullName";
+            user.Culture = "en-US";
+            user.Email = "TestUnique@email.com";
+            user.Language = "en";
+            user.Password = "P@ssword";
+
+            try
+            {
+                //Create User
+                var createdUser = _userRepository.CreateUser(user);
+                //Get Inserted User
+                var storedUser = _userRepository.GetUserById(createdUser.Data);
+
+                Assert.IsNotNull(storedUser);
+                Assert.AreEqual(createdUser.Message, "User Created");
+
+                //Second User
+                var secondUser = _userRepository.CreateUser(user);
+
+                Assert.AreEqual(secondUser.Message, "User Allready Exists");
+
+            }
+            catch (Exception ex)
+            {
+                //Test Failed
+                Assert.IsNotNull(ex.Message);
             }
             finally
             {

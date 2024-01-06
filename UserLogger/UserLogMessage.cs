@@ -15,8 +15,6 @@ namespace UserLogger
         public string Parameters { get; set; }
         public string Message { get; set; }
 
-
-
         public UserLogMessage()
         {
 
